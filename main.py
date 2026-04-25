@@ -112,10 +112,15 @@ def process_job(job_id: str, files_data: list[tuple[str, bytes]]):
         job["current"] = i + 1
         job["current_file"] = filename
         try:
-            image_bytes        = fix_and_resize(raw_bytes)
+            print(f"[{filename}] 画像リサイズ中...")
+            image_bytes = fix_and_resize(raw_bytes)
+            print(f"[{filename}] Claude解析中...")
             title, summary, category = analyze_image(image_bytes)
-            file_id            = upload_to_notion(image_bytes, filename)
-            page_id            = create_notion_page(title, summary, category, file_id)
+            print(f"[{filename}] タイトル={title} カテゴリ={category}")
+            print(f"[{filename}] Notionアップロード中...")
+            file_id = upload_to_notion(image_bytes, filename)
+            page_id = create_notion_page(title, summary, category, file_id)
+            print(f"[{filename}] 完了 page_id={page_id[:8]}")
             job["results"].append({
                 "filename": filename,
                 "title":    title,
@@ -125,6 +130,7 @@ def process_job(job_id: str, files_data: list[tuple[str, bytes]]):
                 "success":  True,
             })
         except Exception as e:
+            print(f"[{filename}] エラー: {e}")
             job["results"].append({"filename": filename, "error": str(e), "success": False})
     job["status"] = "done"
 
