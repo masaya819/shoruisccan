@@ -50,7 +50,8 @@ def analyze_image(image_bytes: bytes) -> tuple[str, str, str]:
                     "この書類画像を日本語で解析してください。\n"
                     "以下のJSON形式のみで返答してください。余分なテキスト不要。\n"
                     '{"title":"書類タイトル（具体的に）","summary":"内容の要約（100字以内）",'
-                    '"category":"カテゴリ（役所・手続き／医療・保険／学費・奨学金／給与・規程／金融・税務／保険・年金／その他のいずれか）"}'
+                    '"category":"カテゴリ（役所・手続き／医療・保険／学費・奨学金／給与・規程／金融・税務／保険・年金／その他のいずれか）",'
+                    '"text":"書類の全文テキスト（読み取れる文字を全て書き起こす）"}'
                 )},
             ],
         }],
@@ -61,7 +62,7 @@ def analyze_image(image_bytes: bytes) -> tuple[str, str, str]:
         if raw.startswith("json"):
             raw = raw[4:]
     data = json.loads(raw)
-    return data["title"], data["summary"], data["category"]
+    return data["title"], data["summary"], data["category"], data.get("text", "")
 
 
 def upload_to_notion(image_bytes: bytes, filename: str) -> str:
@@ -83,7 +84,17 @@ def upload_to_notion(image_bytes: bytes, filename: str) -> str:
     return file_id
 
 
-def create_notion_page(title: str, summary: str, category: str, file_id: str) -> str:
+def create_notion_page(title: str, summary: str, category: str, file_id: str, text: str = "") -> str:
+    children = [
+        {"object": "block", "type": "image",
+         "image": {"type": "file_upload", "file_upload": {"id": file_id}}},
+    ]
+    if text:
+        for chunk_start in range(0, min(len(text), 4000), 2000):
+            children.append({
+                "object": "block", "type": "paragraph",
+                "paragraph": {"rich_text": [{"type": "text", "text": {"content": text[chunk_start:chunk_start+2000]}}]}
+            })
     body = {
         "parent": {"database_id": NOTION_DB_ID},
         "properties": {
@@ -92,10 +103,7 @@ def create_notion_page(title: str, summary: str, category: str, file_id: str) ->
             "カテゴリ":  {"select":    {"name": category}},
             "ステータス": {"status":   {"name": "未処理"}},
         },
-        "children": [
-            {"object": "block", "type": "image",
-             "image": {"type": "file_upload", "file_upload": {"id": file_id}}},
-        ],
+        "children": children,
     }
     with httpx.Client(timeout=60) as client:
         r = client.post("https://api.notion.com/v1/pages", headers=NOTION_HEADERS, json=body)
@@ -115,11 +123,11 @@ def process_job(job_id: str, files_data: list[tuple[str, bytes]]):
             print(f"[{filename}] 画像リサイズ中...")
             image_bytes = fix_and_resize(raw_bytes)
             print(f"[{filename}] Claude解析中...")
-            title, summary, category = analyze_image(image_bytes)
-            print(f"[{filename}] タイトル={title} カテゴリ={category}")
+            title, summary, category, text = analyze_image(image_bytes)
+            print(f"[{filename}] タイトル={title} カテゴリ={category} テキスト={len(text)}文字")
             print(f"[{filename}] Notionアップロード中...")
             file_id = upload_to_notion(image_bytes, filename)
-            page_id = create_notion_page(title, summary, category, file_id)
+            page_id = create_notion_page(title, summary, category, file_id, text)
             print(f"[{filename}] 完了 page_id={page_id[:8]}")
             job["results"].append({
                 "filename": filename,
