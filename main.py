@@ -185,11 +185,10 @@ HTML = r"""<!DOCTYPE html>
   <div class="sub">写真を選んで Notion へ自動登録</div>
 </header>
 <main id="view-select">
-  <div class="drop-zone" id="dropZone">
-    <div class="drop-icon">📄</div>
-    <div class="drop-label"><strong>写真を選択</strong><br>複数枚まとめて送信できます</div>
-    <input type="file" id="fileInput" accept="image/*" multiple>
-  </div>
+  <button class="btn btn-primary" id="addBtn" style="position:relative;overflow:hidden">
+    ＋ 写真を追加
+    <input type="file" id="fileInput" accept="image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer">
+  </button>
   <div class="preview-grid hidden" id="previewGrid"></div>
   <button class="btn btn-primary hidden" id="sendBtn" disabled>Notionへ送信</button>
   <button class="btn btn-ghost hidden" id="clearBtn">クリア</button>
@@ -218,7 +217,9 @@ let selectedFiles = [];
 let pollTimer = null;
 
 $('fileInput').addEventListener('change', e => {
-  selectedFiles = Array.from(e.target.files);
+  const newFiles = Array.from(e.target.files);
+  selectedFiles = selectedFiles.concat(newFiles);
+  e.target.value = '';
   renderPreviews();
 });
 
