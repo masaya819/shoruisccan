@@ -188,7 +188,7 @@ HTML = r"""<!DOCTYPE html>
   <div class="drop-zone" id="dropZone">
     <div class="drop-icon">📄</div>
     <div class="drop-label"><strong>写真を選択</strong><br>複数枚まとめて送信できます</div>
-    <input type="file" id="fileInput" accept="image/*" multiple capture="environment">
+    <input type="file" id="fileInput" accept="image/*" multiple>
   </div>
   <div class="preview-grid hidden" id="previewGrid"></div>
   <button class="btn btn-primary hidden" id="sendBtn" disabled>Notionへ送信</button>
