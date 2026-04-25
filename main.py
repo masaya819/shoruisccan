@@ -41,7 +41,7 @@ def analyze_image(image_bytes: bytes) -> tuple[str, str, str]:
     b64 = base64.standard_b64encode(image_bytes).decode()
     msg = client.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=512,
+        max_tokens=4096,
         messages=[{
             "role": "user",
             "content": [
